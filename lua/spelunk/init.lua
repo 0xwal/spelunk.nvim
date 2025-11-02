@@ -119,6 +119,16 @@ M.add_bookmark = function()
 	M.persist()
 end
 
+M.toggle_bookmark = function()
+	if ui.is_open() then
+		vim.notify("[spelunk.nvim] Cannot toggle bookmark while UI is open")
+		return
+	end
+	markmgr.toggle_mark_current_pos(current_stack_index)
+	update_window(true)
+	M.persist()
+end
+
 ---@param direction 1 | -1
 M.move_cursor = function(direction)
 	if direction ~= 1 and direction ~= -1 then

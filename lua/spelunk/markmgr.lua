@@ -51,6 +51,9 @@ local file_set
 ---@type boolean
 local show_status_col
 
+---@type table<string, number>
+local mark_ids = {}
+
 local M = {}
 
 ---@type integer
@@ -65,6 +68,11 @@ local new_mark = function()
 		col = vim.fn.col("."),
 		meta = {},
 	}
+end
+
+---@param Mark
+local mark_to_id = function(mark)
+	return ("%s.%s.%s"):format(mark.file, mark.line, mark.col)
 end
 
 -- Utility to standardize the setting of extmarks
@@ -196,6 +204,7 @@ M.init = function(phys_stacks, persist_args, show_status)
 	show_status_col = show_status
 	stacks = {}
 	file_set = {}
+	already_added = {}
 
 	for _, stack in ipairs(phys_stacks) do
 		---@type MarkStack
@@ -207,7 +216,13 @@ M.init = function(phys_stacks, persist_args, show_status)
 			file_set[mark.file] = true
 			---@type Mark
 			local newmark = util.copy_tbl(mark)
-			table.insert(newstack.marks, newmark)
+			local id = mark_to_id(newmark)
+
+			if not already_added[id] then
+				table.insert(newstack.marks, newmark)
+				already_added[id] = true
+				mark_ids[id] = #newstack.marks
+			end
 		end
 		table.insert(stacks, newstack)
 	end
@@ -340,7 +355,15 @@ M.add_mark_current_pos = function(stack_idx)
 	local bufnr = vim.api.nvim_get_current_buf()
 	local newmark = new_mark()
 	newmark.bufnr = bufnr
+	local id = mark_to_id(newmark)
+
+	if mark_ids[id] then
+		return
+	end
+
 	table.insert(stacks[stack_idx].marks, newmark)
+	mark_ids[id] = #stacks[stack_idx].marks
+
 	newmark = set_extmark(newmark, bufnr, #stacks[stack_idx].marks)
 	vim.notify(
 		string.format(
@@ -351,6 +374,46 @@ M.add_mark_current_pos = function(stack_idx)
 			newmark.col
 		)
 	)
+end
+
+---@param stack_idx integer
+M.remove_mark_current_pos = function(stack_idx)
+	local newmark = new_mark()
+	local id = mark_to_id(newmark)
+
+	local idx = mark_ids[id]
+
+	if not idx then
+		return
+	end
+
+	table.remove(stacks[stack_idx].marks, idx)
+	mark_ids[id] = nil
+
+	vim.notify(
+		string.format(
+			"[spelunk.nvim] Bookmark remove from stack '%s': %s:%d:%d",
+			stacks[stack_idx].name,
+			newmark.file,
+			newmark.line,
+			newmark.col
+		)
+	)
+end
+
+---@param stack_idx integer
+M.toggle_mark_current_pos = function(stack_idx)
+	local newmark = new_mark()
+	local id = mark_to_id(newmark)
+
+	local idx = mark_ids[id]
+
+	if not idx then
+		M.add_mark_current_pos(stack_idx)
+		return
+	end
+
+	M.remove_mark_current_pos(stack_idx)
 end
 
 ---@param stack_name string

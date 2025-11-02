@@ -142,6 +142,7 @@ local create_window = function(opts)
 		minwidth = opts.minwidth,
 		minheight = opts.minheight,
 		borderchars = border_chars,
+		borderhighlight = "FloatBorder"
 	})
 	vim.api.nvim_set_option_value("wrap", false, { win = win_id })
 	vim.api.nvim_set_option_value("modifiable", false, { buf = bufnr })

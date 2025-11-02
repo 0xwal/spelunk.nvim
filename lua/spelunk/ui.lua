@@ -13,7 +13,6 @@
 ---@field max_stack_size integer
 
 local layout = require("spelunk.layout")
-local popup = require("plenary.popup")
 
 local M = {}
 
@@ -48,6 +47,10 @@ M.previous_win_id = nil
 ---@param id integer
 local window_ready = function(id)
 	return id and id ~= -1 and vim.api.nvim_win_is_valid(id)
+end
+
+local function to_bookmarks_title(title)
+	return ("[%s]"):format(title)
 end
 
 ---@param win_id integer
@@ -135,17 +138,26 @@ end
 ---@param opts CreateWinOpts
 local create_window = function(opts)
 	local bufnr = vim.api.nvim_create_buf(false, true)
-	local win_id = popup.create(bufnr, {
-		title = opts.title,
-		line = opts.line,
+
+	local win_opts = {
+		relative = "editor",
+		row = opts.line,
 		col = opts.col,
-		minwidth = opts.minwidth,
-		minheight = opts.minheight,
-		borderchars = border_chars,
-		borderhighlight = "FloatBorder"
-	})
+		width = opts.minwidth,
+		height = opts.minheight,
+		style = "minimal",
+		border = "rounded",
+		title = opts.title,
+		title_pos = "center",
+	}
+
+	local win_id = vim.api.nvim_open_win(bufnr, true, win_opts)
+
 	vim.api.nvim_set_option_value("wrap", false, { win = win_id })
 	vim.api.nvim_set_option_value("modifiable", false, { buf = bufnr })
+
+	vim.api.nvim_win_set_option(win_id, "winhighlight", "FloatBorder:FloatBorder")
+
 	return bufnr, win_id
 end
 
@@ -231,13 +243,14 @@ M.close_help = function()
 end
 
 ---@param max_stack_size integer
-local create_windows = function(max_stack_size)
+local create_windows = function(max_stack_size, opts)
 	M.previous_win_id = vim.api.nvim_get_current_win()
 	local bufnr, win_id
+	local title = to_bookmarks_title(opts.title)
 	if layout.has_bookmark_dimensions() then
 		local win_dims = layout.bookmark_dimensions()
 		bufnr, win_id = create_window({
-			title = "Bookmarks",
+			title = title,
 			col = win_dims.col,
 			line = win_dims.line,
 			minwidth = win_dims.base.width,
@@ -249,7 +262,7 @@ local create_windows = function(max_stack_size)
 	if layout.has_preview_dimensions() then
 		local prev_dims = layout.preview_dimensions()
 		local _, prev_id = create_window({
-			title = "Preview",
+			title = "📺",
 			col = prev_dims.col,
 			line = prev_dims.line,
 			minwidth = prev_dims.base.width,
@@ -374,18 +387,19 @@ M.update_window = function(opts)
 		local prefix = idx == opts.cursor_index and cursor_character or " "
 		table.insert(content_lines, string.format("%s%2d %s", prefix, idx, line))
 	end
-	local content = { "Current stack: " .. opts.title, unpack(content_lines) }
+
+	local title = to_bookmarks_title(opts.title)
+
+	local content = { unpack(content_lines) }
 	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, content)
 	vim.api.nvim_set_option_value("modifiable", false, { buf = bufnr })
 
 	-- Move cursor to the selected line
-	local offset
-	if #opts.lines > 0 then
-		offset = 1
-	else
-		offset = 0
-	end
+	local offset = 0
 	vim.api.nvim_win_set_cursor(window_id, { opts.cursor_index + offset, 0 })
+
+	local win_id = window_id
+	vim.api.nvim_win_set_config(win_id, { title = title })
 
 	update_preview(opts)
 end
@@ -395,7 +409,7 @@ M.toggle_window = function(opts)
 	if window_ready(window_id) then
 		M.close_windows()
 	else
-		create_windows(opts.max_stack_size)
+		create_windows(opts.max_stack_size, opts)
 		M.update_window(opts)
 		vim.api.nvim_set_current_win(window_id)
 	end

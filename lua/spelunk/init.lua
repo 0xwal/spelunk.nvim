@@ -1,8 +1,9 @@
 local ui = require("spelunk.ui")
 local persist = require("spelunk.persistence")
 ---@diagnostic disable-next-line
-local tele = require("spelunk.telescope")
 local markmgr = require("spelunk.markmgr")
+
+local picker, picker_name = nil
 
 local M = {}
 
@@ -261,15 +262,15 @@ M.all_full_marks = function()
 end
 
 M.search_marks = function()
-	if not tele then
-		vim.notify("[spelunk.nvim] Install telescope.nvim to search marks")
+	if not picker then
+		vim.notify(("[spelunk.nvim] Install %s to search marks"):format(picker_name))
 		return
 	end
 	if ui.is_open() then
 		vim.notify("[spelunk.nvim] Cannot search with UI open")
 		return
 	end
-	tele.search_marks("[spelunk.nvim] Bookmarks", M.all_full_marks(), goto_position)
+	picker.search_marks("[spelunk.nvim] Bookmarks", M.all_full_marks(), goto_position)
 end
 
 ---@return FullBookmark[]
@@ -289,20 +290,20 @@ M.current_full_marks = function()
 end
 
 M.search_current_marks = function()
-	if not tele then
-		vim.notify("[spelunk.nvim] Install telescope.nvim to search current marks")
+	if not picker then
+		vim.notify(("[spelunk.nvim] Install %s to search current marks"):format(picker_name))
 		return
 	end
 	if ui.is_open() then
 		vim.notify("[spelunk.nvim] Cannot search with UI open")
 		return
 	end
-	tele.search_marks("[spelunk.nvim] Current Stack", M.current_full_marks(), goto_position)
+	picker.search_marks("[spelunk.nvim] Current Stack", M.current_full_marks(), goto_position)
 end
 
 M.search_stacks = function()
-	if not tele then
-		vim.notify("[spelunk.nvim] Install telescope.nvim to search stacks")
+	if not picker then
+		vim.notify(("[spelunk.nvim] Install %s to search stacks"):format(picker_name))
 		return
 	end
 	if ui.is_open() then
@@ -318,7 +319,7 @@ M.search_stacks = function()
 		current_stack_index = stack_idx
 		M.toggle_window()
 	end
-	tele.search_stacks("[spelunk.nvim] Stacks", markmgr.stack_names(), cb)
+	picker.search_stacks("[spelunk.nvim] Stacks", markmgr.stack_names(), cb)
 end
 
 ---@return string
@@ -379,6 +380,42 @@ M.get_mark_meta = function(stack_idx, mark_idx, field)
 	return markmgr.get_mark_meta(stack_idx, mark_idx, field)
 end
 
+local function load_picker(chosen_picker, base_config, set)
+	if chosen_picker == "snacks" then
+		picker, picker_name = require("spelunk.snacks")
+
+		if not picker then
+			return
+		end
+
+		set(base_config.search_bookmarks, M.search_marks, "[spelunk.nvim] Fuzzy find bookmarks")
+		set(
+			base_config.search_current_bookmarks,
+			M.search_current_marks,
+			"[spelunk.nvim] Fuzzy find bookmarks in current stack"
+		)
+		set(base_config.search_stacks, M.search_stacks, "[spelunk.nvim] Fuzzy find stacks")
+		return
+
+	else
+		picker, picker_name = require("spelunk.telescope")
+		-- Register pickerscope extension, only if telescope itself is loaded already
+		if not picker then
+			return
+		end
+
+		local telescope_loaded, telescope = pcall(require, "telescope")
+		telescope.load_extension("spelunk")
+		set(base_config.search_bookmarks, telescope.extensions.spelunk.marks, "[spelunk.nvim] Fuzzy find bookmarks")
+		set(
+			base_config.search_current_bookmarks,
+			telescope.extensions.spelunk.current_marks,
+			"[spelunk.nvim] Fuzzy find bookmarks in current stack"
+		)
+		set(base_config.search_stacks, telescope.extensions.spelunk.stacks, "[spelunk.nvim] Fuzzy find stacks")
+	end
+end
+
 M.setup = function(c)
 	local conf = c or {}
 	local cfg = require("spelunk.config")
@@ -387,6 +424,12 @@ M.setup = function(c)
 	window_config = conf.window_mappings or {}
 	cfg.apply_window_defaults(window_config)
 	ui.setup(base_config, window_config, conf.cursor_character or cfg.get_default("cursor_character"))
+
+	local chosen_picker = conf.picker or cfg.get_default("picker")
+
+	local set = cfg.set_keymap
+
+	load_picker(chosen_picker, base_config, set)
 
 	require("spelunk.layout").setup(conf.orientation or cfg.get_default("orientation"))
 
@@ -413,7 +456,6 @@ M.setup = function(c)
 	-- Configure the prefix to use for the lualine integration
 	statusline_prefix = conf.statusline_prefix or cfg.get_default("statusline_prefix")
 
-	local set = cfg.set_keymap
 	set(base_config.toggle, M.toggle_window, "[spelunk.nvim] Toggle UI")
 	set(base_config.add, M.add_bookmark, "[spelunk.nvim] Add bookmark")
 	set(
@@ -426,20 +468,6 @@ M.setup = function(c)
 		':lua require("spelunk").select_and_goto_bookmark(-1)<CR>',
 		"[spelunk.nvim] Go to previous bookmark"
 	)
-
-	-- Register telescope extension, only if telescope itself is loaded already
-	local telescope_loaded, telescope = pcall(require, "telescope")
-	if not telescope_loaded or not telescope then
-		return
-	end
-	telescope.load_extension("spelunk")
-	set(base_config.search_bookmarks, telescope.extensions.spelunk.marks, "[spelunk.nvim] Fuzzy find bookmarks")
-	set(
-		base_config.search_current_bookmarks,
-		telescope.extensions.spelunk.current_marks,
-		"[spelunk.nvim] Fuzzy find bookmarks in current stack"
-	)
-	set(base_config.search_stacks, telescope.extensions.spelunk.stacks, "[spelunk.nvim] Fuzzy find stacks")
 end
 
 return M

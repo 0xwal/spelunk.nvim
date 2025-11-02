@@ -3,6 +3,7 @@ local M = {}
 local skipkey = "NONE"
 
 local default_config = {
+	picker = "telescope",
 	base_mappings = {
 		toggle = "<leader>bt",
 		add = "<leader>ba",

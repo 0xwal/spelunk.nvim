@@ -1,6 +1,6 @@
 local status_ok, _ = pcall(require, "telescope")
 if not status_ok then
-	return false
+	return false, "telescope.nvim"
 end
 
 local pickers = require("telescope.pickers")

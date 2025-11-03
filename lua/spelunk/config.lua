@@ -4,6 +4,7 @@ local skipkey = "NONE"
 
 local default_config = {
 	picker = "telescope",
+	use_existing_window = true,
 	base_mappings = {
 		toggle = "<leader>bt",
 		add = "<leader>ba",

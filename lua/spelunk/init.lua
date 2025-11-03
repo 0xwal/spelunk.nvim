@@ -7,6 +7,10 @@ local picker, picker_name = nil
 
 local M = {}
 
+
+---@type boolean
+local use_existing_window
+
 ---@type PhysicalStack[]
 local default_stacks = {
 	{ name = "Default", bookmarks = {} },
@@ -69,6 +73,26 @@ local update_window = function(updated_indices)
 	ui.update_window(get_win_update_opts())
 end
 
+---@return integer|nil
+local get_active_window_by_file = function(filename)
+	local wins = vim.api.nvim_tabpage_list_wins(0)
+
+	if #wins == 0 then
+		return nil
+	end
+
+	for _, win in ipairs(wins) do
+		local buf = vim.api.nvim_win_get_buf(win)
+		local file = vim.api.nvim_buf_get_name(buf)
+
+		if file == filename then
+			return win
+		end
+	end
+
+	return nil
+end
+
 ---@param file string
 ---@param line integer
 ---@param split "vertical" | "horizontal" | nil
@@ -77,8 +101,21 @@ local goto_position = function(file, line, col, split)
 		vim.notify("[spelunk.nvim] file being navigated to does not seem to exist: " .. file)
 		return
 	end
+
+	local open_or_focus = function(filename)
+		if use_existing_window then
+			local win = get_active_window_by_file(filename)
+			if win then
+				vim.api.nvim_set_current_win(win)
+				return
+			end
+		end
+
+		vim.api.nvim_command("edit " .. filename)
+	end
+
 	if not split then
-		vim.api.nvim_command("edit " .. file)
+		open_or_focus(file)
 		vim.api.nvim_win_set_cursor(0, { line, col - 1 })
 	elseif split == "vertical" then
 		vim.api.nvim_command("vsplit " .. file)
@@ -492,6 +529,8 @@ M.setup = function(c)
 	load_picker(chosen_picker, base_config, set)
 
 	require("spelunk.layout").setup(conf.orientation or cfg.get_default("orientation"))
+
+	use_existing_window = (conf.use_existing_window ~= nil and { conf.use_existing_window } or { cfg.get_default("use_existing_window") })[1]
 
 	show_status_col = conf.enable_status_col_display or cfg.get_default("enable_status_col_display")
 

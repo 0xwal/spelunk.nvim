@@ -60,13 +60,13 @@ local M = {}
 local ns_id = vim.api.nvim_create_namespace("spelunk")
 
 ---@return Mark
-local new_mark = function()
+local new_mark = function(meta)
 	---@type Mark
 	return {
 		file = vim.api.nvim_buf_get_name(0),
 		line = vim.fn.line("."),
 		col = vim.fn.col("."),
-		meta = {},
+		meta = meta,
 	}
 end
 
@@ -351,9 +351,10 @@ M.move_mark_idx = function(stack_idx, mark_idx, mark_delta)
 end
 
 ---@param stack_idx integer
-M.add_mark_current_pos = function(stack_idx)
+M.add_mark_current_pos = function(stack_idx, meta)
+	meta = meta or {}
 	local bufnr = vim.api.nvim_get_current_buf()
-	local newmark = new_mark()
+	local newmark = new_mark(meta)
 	newmark.bufnr = bufnr
 	local id = mark_to_id(newmark)
 
@@ -402,14 +403,14 @@ M.remove_mark_current_pos = function(stack_idx)
 end
 
 ---@param stack_idx integer
-M.toggle_mark_current_pos = function(stack_idx)
+M.toggle_mark_current_pos = function(stack_idx, meta)
 	local newmark = new_mark()
 	local id = mark_to_id(newmark)
 
 	local idx = mark_ids[id]
 
 	if not idx then
-		M.add_mark_current_pos(stack_idx)
+		M.add_mark_current_pos(stack_idx, meta)
 		return
 	end
 

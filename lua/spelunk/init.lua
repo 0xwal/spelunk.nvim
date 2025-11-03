@@ -109,22 +109,22 @@ M.close_help = function()
 	ui.close_help()
 end
 
-M.add_bookmark = function()
+M.add_bookmark = function(opts)
 	if ui.is_open() then
 		vim.notify("[spelunk.nvim] Cannot create bookmark while UI is open")
 		return
 	end
-	markmgr.add_mark_current_pos(current_stack_index)
+	markmgr.add_mark_current_pos(current_stack_index, opts)
 	update_window(true)
 	M.persist()
 end
 
-M.toggle_bookmark = function()
+M.toggle_bookmark = function(opts)
 	if ui.is_open() then
 		vim.notify("[spelunk.nvim] Cannot toggle bookmark while UI is open")
 		return
 	end
-	markmgr.toggle_mark_current_pos(current_stack_index)
+	markmgr.toggle_mark_current_pos(current_stack_index, opts)
 	update_window(true)
 	M.persist()
 end

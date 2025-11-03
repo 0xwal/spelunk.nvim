@@ -66,7 +66,7 @@ local new_mark = function(meta)
 		file = vim.api.nvim_buf_get_name(0),
 		line = vim.fn.line("."),
 		col = vim.fn.col("."),
-		meta = meta,
+		meta = meta or {},
 	}
 end
 
@@ -404,7 +404,7 @@ end
 
 ---@param stack_idx integer
 M.toggle_mark_current_pos = function(stack_idx, meta)
-	local newmark = new_mark()
+	local newmark = new_mark(meta)
 	local id = mark_to_id(newmark)
 
 	local idx = mark_ids[id]

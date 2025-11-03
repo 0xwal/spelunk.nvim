@@ -299,6 +299,45 @@ M.current_full_marks = function()
 	return data
 end
 
+---@return FullBookmark[]
+M.all_buffer_full_marks = function()
+	local data = {}
+	local current_filename = vim.api.nvim_buf_get_name(0)
+	for _, stack in ipairs(markmgr.physical_stacks()) do
+		for _, mark in ipairs(stack.bookmarks) do
+			if mark.file == current_filename then
+				table.insert(data, {
+					stack = stack.name,
+					file = mark.file,
+					line = mark.line,
+					col = mark.col,
+					meta = mark.meta,
+				})
+			end
+		end
+	end
+	return data
+end
+
+---@return FullBookmark[]
+M.current_buffer_full_marks = function()
+	local data = {}
+	local stack = markmgr.physical_stack(current_stack_index)
+	local current_filename = vim.api.nvim_buf_get_name(0)
+	for _, mark in ipairs(stack.bookmarks) do
+		if mark.file == current_filename then
+			table.insert(data, {
+				stack = stack.name,
+				file = mark.file,
+				line = mark.line,
+				col = mark.col,
+				meta = mark.meta,
+			})
+		end
+	end
+	return data
+end
+
 M.search_current_marks = function()
 	if not picker then
 		vim.notify(("[spelunk.nvim] Install %s to search current marks"):format(picker_name))
@@ -309,6 +348,18 @@ M.search_current_marks = function()
 		return
 	end
 	picker.search_marks("[spelunk.nvim] Current Stack", M.current_full_marks(), goto_position)
+end
+
+M.search_current_buffer_marks = function()
+	if not picker then
+		vim.notify(("[spelunk.nvim] Install %s to search current buffer marks"):format(picker_name))
+		return
+	end
+	if ui.is_open() then
+		vim.notify("[spelunk.nvim] Cannot search with UI open")
+		return
+	end
+	picker.search_marks("[spelunk.nvim] Current Stack", M.current_buffer_full_marks(), goto_position)
 end
 
 M.search_stacks = function()
@@ -406,7 +457,6 @@ local function load_picker(chosen_picker, base_config, set)
 		)
 		set(base_config.search_stacks, M.search_stacks, "[spelunk.nvim] Fuzzy find stacks")
 		return
-
 	else
 		picker, picker_name = require("spelunk.telescope")
 		-- Register pickerscope extension, only if telescope itself is loaded already

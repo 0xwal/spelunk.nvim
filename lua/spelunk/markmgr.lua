@@ -330,7 +330,9 @@ M.move_mark_in_stack = function(stack_idx, mark_idx, mark_delta)
 	end
 	local currmark = stacks[stack_idx].marks[mark_idx]
 	local newmark = stacks[stack_idx].marks[newidx]
+	newmark.meta.idx = mark_idx
 	stacks[stack_idx].marks[mark_idx] = newmark
+	currmark.meta.idx = newidx
 	stacks[stack_idx].marks[newidx] = currmark
 	return true
 end
@@ -354,6 +356,10 @@ end
 M.add_mark_current_pos = function(stack_idx, meta)
 	meta = meta or {}
 	local bufnr = vim.api.nvim_get_current_buf()
+
+
+	local marks_count = #stacks[stack_idx].marks
+
 	local newmark = new_mark(meta)
 	newmark.bufnr = bufnr
 	local id = mark_to_id(newmark)
@@ -361,6 +367,8 @@ M.add_mark_current_pos = function(stack_idx, meta)
 	if mark_ids[id] then
 		return
 	end
+
+	newmark.meta.idx = marks_count + 1
 
 	table.insert(stacks[stack_idx].marks, newmark)
 	mark_ids[id] = #stacks[stack_idx].marks

@@ -75,6 +75,14 @@ end
 
 ---@return integer|nil
 local get_active_window_by_file = function(filename)
+	local focused_buf = vim.api.nvim_get_current_buf()
+	local focused_buf_name = vim.api.nvim_buf_get_name(focused_buf)
+
+	if focused_buf_name == filename then
+		return true
+	end
+
+
 	local wins = vim.api.nvim_tabpage_list_wins(0)
 
 	if #wins == 0 then
@@ -105,6 +113,12 @@ local goto_position = function(file, line, col, split)
 	local open_or_focus = function(filename)
 		if use_existing_window then
 			local win = get_active_window_by_file(filename)
+
+			if win == true then
+				vim.api.nvim_win_set_cursor(0, { line, col - 1 })
+				return
+			end
+
 			if win then
 				vim.api.nvim_set_current_win(win)
 				return

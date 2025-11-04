@@ -275,7 +275,9 @@ local create_windows = function(max_stack_size, opts)
 		-- Set up keymaps for navigation within the window
 		local set = require("spelunk.config").set_buf_keymap(bufnr)
 		set(window_config.cursor_down, ':lua require("spelunk").move_cursor(1)<CR>', "[spelunk.nvim] Move cursor down")
+		set("<Down>", ':lua require("spelunk").move_cursor(1)<CR>', "[spelunk.nvim] Move cursor down")
 		set(window_config.cursor_up, ':lua require("spelunk").move_cursor(-1)<CR>', "[spelunk.nvim] Move cursor up")
+		set("<Up>", ':lua require("spelunk").move_cursor(-1)<CR>', "[spelunk.nvim] Move cursor up")
 		set(
 			window_config.bookmark_down,
 			':lua require("spelunk").move_bookmark(1)<CR>',

@@ -128,7 +128,7 @@ end
 M.setup = function(base_cfg, window_cfg, cursor_char)
 	base_config = base_cfg
 	window_config = window_cfg
-	if type(cursor_char) ~= "string" or string.len(cursor_char) ~= 1 then
+	if type(cursor_char) ~= "string" then
 		vim.notify("[spelunk.nvim] Passed invalid cursor character, falling back to default")
 		cursor_char = ">"
 	end
@@ -384,8 +384,9 @@ M.update_window = function(opts)
 	vim.api.nvim_set_option_value("modifiable", true, { buf = bufnr })
 	local content_lines = {}
 	for idx, line in ipairs(opts.lines) do
-		local prefix = idx == opts.cursor_index and cursor_character or " "
-		table.insert(content_lines, string.format("%s%2d %s", prefix, idx, line))
+		local prefix = idx == opts.cursor_index and cursor_character or string.rep(" ", string.len(cursor_character))
+		local content = string.format("%s%d %s", prefix, idx, line)
+		table.insert(content_lines, content)
 	end
 
 	local title = to_bookmarks_title(opts.title)
